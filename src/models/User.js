@@ -9,6 +9,12 @@ const UserSchema = new mongoose.Schema({
   nonce: {
     type: String
   },
+  username: {
+    type: String
+  },
+  username_lower: {
+    type: String
+  },
   isAlpha: {
     type: Boolean,
     required: true,

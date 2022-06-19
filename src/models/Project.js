@@ -35,6 +35,17 @@ const ProjectSchema = new mongoose.Schema({
     required: true,
     default: 0
   },
+  twitter: {
+    type: String
+  },
+  discord: {
+    type: String
+  },
+  social_fetched: {
+    type: Boolean,
+    default: false,
+    required: true
+  },
   reviews: [
     {
       user: {

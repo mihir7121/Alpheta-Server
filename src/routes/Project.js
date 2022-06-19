@@ -8,6 +8,7 @@ const router = new Router();
 
 router.get('/explore', 
   query('limit').optional().default(20).isInt({min: 1, max: 50}),
+  query('page').optional().default(1).isInt({min: 1}),
   ProjectController.explore
 )
 

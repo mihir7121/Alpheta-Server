@@ -4,18 +4,70 @@ import { logActivity } from "./Activity.js";
 
 export const explore = async (req, res) => {
   try {
-    const projects = await Project.find({}, {
-      slug: 1,
-      imageURL: 1,
-      score: 1,
-      name: 1,
-      description: 1,
-      _id: 1
-    }).limit(req.query.limit ? parseInt(req.query.limit) : 50)
+    const limit = req.query.limit ? parseInt(req.query.limit) : 20
+    const page = req.query.page ? parseInt(req.query.page) : 1
+    const query = req.query.q || ''
+
+    let projects, count
+    
+    if (query.trim() == '') {
+      projects = await Project.find({}, {
+        slug: 1,
+        imageURL: 1,
+        score: 1,
+        name: 1,
+        description: 1,
+        discord: 1,
+        twitter: 1,
+        _id: 1
+      }).skip((page - 1) * limit).limit(limit)
+
+      count = await Project.count({})
+    } else {
+      projects = await Project.aggregate([
+          { '$search': { 
+            'index': 'NFT_Project', 
+            'text': { 
+              'query': query, 
+              'path': { 'wildcard': '*' } 
+            } 
+          }},
+          { "$sort": { "score": { "$meta": "textScore" } } },
+          { "$project": {
+            slug: 1,
+            imageURL: 1,
+            score: 1,
+            name: 1,
+            description: 1,
+            discord: 1,
+            twitter: 1,
+            _id: 1
+          }},
+          { "$skip": (page - 1) * limit },
+          { "$limit": limit },
+      ])
+
+      const data = (await Project.aggregate([
+        { '$search': { 
+          'index': 'NFT_Project', 
+          'text': { 
+            'query': query, 
+            'path': { 'wildcard': '*' } 
+          } 
+        }},
+        { '$count': 'count' }
+      ]))
+
+      if (data.length == 0) count = 0
+      else count = data[0].count
+    }
+
+    const page_count = Math.ceil(count / limit)
 
     res.status(200).send({
       success: true,
-      projects
+      projects,
+      page_count
     })
   } catch (error) {
     console.log(error);
@@ -34,6 +86,8 @@ export const leaderboard = async (req, res) => {
       score: 1,
       name: 1,
       description: 1,
+      discord: 1,
+      twitter: 1,
       _id: 1
     })
     .sort({
@@ -59,7 +113,7 @@ export const view = async (req, res) => {
     const slug = req.params.slug
     const project = await Project.findOne({slug}).populate({
       path: 'reviews.user',
-      select: 'address isAlpha _id'
+      select: 'address isAlpha _id username'
     })
 
     const response = await axios.get(
@@ -71,6 +125,17 @@ export const view = async (req, res) => {
 
     const openseaData = response.data;
 
+    if (
+      !project.social_fetched ||
+      project.discord != openseaData.collection['discord_url'] ||
+      project.twitter != openseaData.collection['twitter_username']
+    ) {
+      project.discord = openseaData.collection['discord_url']
+      project.twitter = openseaData.collection['twitter_username']
+      project.social_fetched = true
+      project.save()
+    }
+
     res.status(200).json({
       success: true,
       id: project._id,
@@ -81,6 +146,7 @@ export const view = async (req, res) => {
       vote_count_user: project.vote_count_user,
       reviews: project.reviews,
       name: openseaData.collection['name'],
+      externalURL: openseaData.collection['external_url'],
       description: openseaData.collection['description'],
       discord: openseaData.collection['discord_url'],
       twitter: openseaData.collection['twitter_username'],
@@ -140,13 +206,14 @@ export const addReview = async (req, res) => {
       }
     });
 
-    let newAlpha = 0;
+    /*let newAlpha = 0;
     let newNormal = 0;
 
     if (alphaCount !== 0) newAlpha = (0.6 * alphaSum) / alphaCount;
     if (normalCount !== 0) newNormal = (0.4 * normalSum) / normalCount;
+    let newScore = newAlpha + newNormal;*/
 
-    let newScore = newAlpha + newNormal;
+    let newScore = (normalSum + alphaSum) / (normalCount + alphaCount)
     project.score = newScore;
     project.vote_count_alpha = alphaCount;
     project.vote_count_user = normalCount;

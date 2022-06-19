@@ -71,4 +71,11 @@ router.post('/unfollow',
   UserController.unfollow
 )
 
+router.post('/update-username', 
+  body('username').isString(),
+  validate,
+  authenticate,
+  UserController.updateUsername
+)
+
 export default router

@@ -139,7 +139,8 @@ export const leaderboard = async (req, res) => {
     const users = await User.find({}, {
       address: 1,
       review_count: 1,
-      isAlpha: 1
+      isAlpha: 1,
+      username: 1
     }).sort({
       review_count: -1
     })
@@ -165,7 +166,8 @@ export const profile = async (req, res) => {
       review_count: 1,
       isAlpha: 1,
       followers: 1,
-      following: 1
+      following: 1,
+      username: 1
     }).lean()
 
     if (user == null) {
@@ -302,4 +304,43 @@ export const follow = async (req, res) => {
 export const unfollow = async (req, res) => {
   req.params.remove = true
   return await follow(req, res)
+}
+
+export const updateUsername = async (req, res) => {
+  try {
+    const user = req.user
+    const username = req.body.username.trim()
+    const usernameLower = username.toLowerCase()
+
+    if (!(/^[a-zA-Z0-9_]{3,25}$/.test(username))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid username'
+      })
+    }
+
+    const otherUser = await User.findOne({username_lower: usernameLower})
+
+    if (otherUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'That username is already in use'
+      })
+    }
+
+    user.username = username
+    user.username_lower = usernameLower
+
+    await user.save()
+
+    res.status(200).json({
+      success: true
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'An unknown error occurred'
+    })
+  }
 }
