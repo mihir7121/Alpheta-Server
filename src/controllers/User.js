@@ -118,6 +118,27 @@ export const feedback = async (req, res) => {
   }
 }
 
+export const checkAuth = async (req, res) => {
+  try {
+    const user = req.user
+
+    res.status(200).send({
+      success: true,
+      user: {
+        _id: user._id,
+        address: user.address,
+        name: user.username
+      },
+    })
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      message: 'An unknown error occurred'
+    })
+  }
+}
+
 export const test = async (req, res) => {
   try {
 

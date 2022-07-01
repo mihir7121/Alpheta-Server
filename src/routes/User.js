@@ -19,6 +19,12 @@ router.post('/verify',
   UserController.verify
 )
 
+router.post('/check-auth', 
+  validate,
+  authenticate,
+  UserController.checkAuth
+)
+
 router.get('/leaderboard',
   query('limit').optional().default(20).isInt({min: 1, max: 50}),
   validate,

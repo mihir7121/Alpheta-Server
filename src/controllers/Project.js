@@ -177,17 +177,42 @@ export const addReview = async (req, res) => {
     const review = {
       user: user.id,
       text: req.body.text,
-      score: req.body.score
+      score: req.body.score,
+      date: new Date()
     };
 
-    if (project.reviews) project.reviews.unshift(review);
+    if (project.reviews) {
+      let oldReview = null
+      // If user has already written a review, update it
+      for (let i = 0; i < project.reviews.length; i++) {
+        if (user._id.equals(project.reviews[i].user)) {
+          oldReview = project.reviews[i]
+
+          if ((new Date() - new Date(oldReview.date)) < 1000 * 60 * 10) {
+            return res.status(403).send({
+              success: false,
+              message: 'You have to wait for a while in order to update your review.'
+            })
+          }
+
+          oldReview.score = review.score
+          oldReview.date = review.date
+          oldReview.text = review.text
+          break
+        }
+      }
+
+      // Else, add the new review
+      if (!oldReview)
+        project.reviews.unshift(review);
+    }
     else project.reviews = [review];
 
     await project.save();
 
     project = await Project.findOne({ slug }).populate({
       path: 'reviews.user',
-      select: 'address isAlpha'
+      select: 'address isAlpha _id username'
     });
 
     let alphaCount = 0;

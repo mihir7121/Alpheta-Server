@@ -59,6 +59,11 @@ const ProjectSchema = new mongoose.Schema({
       score: {
         type: Number,
         required: true
+      },
+      date: {
+        type: mongoose.SchemaTypes.Date,
+        required: true,
+        default: new Date(2022, 5, 1)
       }
     }
   ]
