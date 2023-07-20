@@ -15,7 +15,9 @@ const app = express()
 const server = http.createServer(app)
 const PORT = process.env.PORT || 17655
 
-app.use(cors())
+app.use(cors({
+  origin: "*"
+}));
 app.use(bodyParser.json())
 app.use('/user', UserRouter)
 app.use('/project', ProjectRouter)
